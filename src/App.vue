@@ -1,5 +1,12 @@
-<template>
+ <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
+    <!-- <div class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center">
+    <svg class="animate-spin -ml-1 mr-3 h-12 w-12 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+  </div> -->
+
     <div class="container">
       <div class="w-full my-4"></div>
       <section>
@@ -11,7 +18,8 @@
             <div class="mt-1 relative rounded-md shadow-md">
               <input
                 v-model="ticker"
-                v-on:keydown.enter="add"
+                @keydown.enter="add"
+                @keydown="testFunc"
                 type="text"
                 name="wallet"
                 id="wallet"
@@ -19,6 +27,7 @@
                 placeholder="Например DOGE"
               />
             </div>
+              <p v-if="errorMessage" >Вы ничего не ввели</p>
           </div>
         </div>
         <button
@@ -49,11 +58,16 @@
           <div
             v-for="t in tickers"
             :key="t.name"
+            @click="select(t)"
+            :class="{
+              'border-4' : sel === t
+            }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
+
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">
-                {{ t.name }}
+                {{ t.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
                 {{ t.price }}
@@ -61,7 +75,7 @@
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-              @click="remove(t)"
+              @click.stop="remove(t)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -82,17 +96,22 @@
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
-      <section class="relative">
+      <section v-if="sel" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          VUE - USD
+          {{sel.name}} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
-          <div class="bg-purple-800 border w-10 h-24"></div>
-          <div class="bg-purple-800 border w-10 h-32"></div>
-          <div class="bg-purple-800 border w-10 h-48"></div>
-          <div class="bg-purple-800 border w-10 h-16"></div>
+          <div 
+          v-for="(bar, idx) in normalizeGraph()"
+          :key="idx"
+          :style="{ height: `${bar}%`}"
+          class="bg-purple-800 border w-10"
+          ></div>
+          
         </div>
-        <button type="button" class="absolute top-0 right-0">
+        <button 
+        @click="sel = null"
+        type="button" class="absolute top-0 right-0">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -127,27 +146,72 @@ export default {
   data() {
     return {
       ticker: "",
-      tickers: [
-        { name: "name1", price: "-" },
-        { name: "name2", price: "-" },
-        { name: "name3", price: "-" }
-      ]
+      tickers: [],
+      sel: null,
+      graph: [],
+      coinSymbols: [],
+      errorMessage: false,
+      coinSymbols: null
     };
+  },
+  mounted: async function () {
+      const coins = await fetch(`https://min-api.cryptocompare.com/data/all/coinlist?summary=true`)
+        this.coinSymbols = await coins.json()
+        if (coins.ok) {
+            
+        }
   },
   methods: {
     add() {
-      const newTicker = {
+      if (this.ticker != "" && this.tickers != []) {
+        const newTicker = {
         name: this.ticker,
         price: "-"
       };
 
       this.tickers.push(newTicker);
+      setInterval(async () => {
+        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key={24c8bb4f08806f9b68c2755a7745d07e764d3b782e9b069959a8325826493089}`)
+        const data = await f.json()
+        this.tickers.find(t => t.name === newTicker.name).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+        if (this.sel?.name === newTicker.name) {
+          this.graph.push(data.USD)
+        }
+        console.log(data)
+      }, 3000)
+      this.errorMessage = false
       this.ticker = "";
+      }
+      else {
+        this.errorMessage = true
+      }
     },
+
+    testFunc(){
+      console.log("Func is working")
+      
+      // for (let i in this.coinSymbols.Data) {
+      //       console.log(this.coinSymbols.Data[i].Symbol)
+      //     }
+    },
+
+    select(ticker) {
+      this.sel = ticker
+      this.grapgh = []
+    },
+
     remove(tickerToRemove) {
       this.tickers = this.tickers.filter(
         (tickers) => tickers != tickerToRemove
       );
+      this.sel = null
+    },
+    normalizeGraph() {
+      const maxVal = Math.max(...this.graph)
+      const minVal = Math.min(...this.graph)
+      return this.graph.map (
+       price => 5 + ((price - minVal) * 95) / (maxVal - minVal)
+      )
     }
   }
 };
