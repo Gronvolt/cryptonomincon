@@ -19,13 +19,16 @@
               <input
                 v-model="ticker"
                 @keydown.enter="add"
-                @keydown="testFunc"
+                @keyup="filterFunc"
                 type="text"
                 name="wallet"
                 id="wallet"
                 class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md"
                 placeholder="Например DOGE"
               />
+            </div>
+            <div  v-if="autoComplete.length">
+              <button @click="completeFunc(coin)" class="my-4 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500" v-for="coin in autoComplete" :key="coin">{{coin}}</button>
             </div>
               <p v-if="errorMessage" >Вы ничего не ввели</p>
           </div>
@@ -151,7 +154,8 @@ export default {
       graph: [],
       coinSymbols: [],
       errorMessage: false,
-      coinSymbols: null
+      coinSymbols: null,
+      autoComplete: []
     };
   },
   mounted: async function () {
@@ -165,7 +169,7 @@ export default {
     add() {
       if (this.ticker != "" && this.tickers != []) {
         const newTicker = {
-        name: this.ticker,
+          name: this.ticker,
         price: "-"
       };
 
@@ -180,19 +184,36 @@ export default {
         console.log(data)
       }, 3000)
       this.errorMessage = false
-      this.ticker = "";
+      this.ticker = ""
+      this.autoComplete = []
       }
       else {
         this.errorMessage = true
       }
+
     },
 
-    testFunc(){
-      console.log("Func is working")
-      
-      // for (let i in this.coinSymbols.Data) {
-      //       console.log(this.coinSymbols.Data[i].Symbol)
-      //     }
+    filterFunc(){ 
+      if (this.ticker != "") {
+        // console.log(this.ticker)
+          this.autoComplete = []
+        
+        for (let i in this.coinSymbols.Data) {
+          this.autoComplete.sort()
+          if(this.autoComplete.length <= 2  &&  i.indexOf(this.ticker) != -1 || i == this.ticker) {
+            this.autoComplete.push(i)
+          }
+          // console.dir(i.indexOf(this.ticker))
+              // let coin = i.filter(word => word.indexOf(this.ticker))
+              // console.log(coin)
+
+            }
+        };     
+    },
+
+    completeFunc(coin) {
+      this.ticker = coin
+      this.add()
     },
 
     select(ticker) {
