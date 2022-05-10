@@ -158,6 +158,16 @@ export default {
       autoComplete: []
     };
   },
+  created() {
+    let localData = localStorage.getItem("chosenCoins")
+
+    if (localData) {
+      this.tickers = JSON.parse(localData)
+      this.tickers.forEach(ticker => {
+        this.subscribeToUpdates(ticker.name)
+      })
+    }
+  },
   mounted: async function () {
       const coins = await fetch(`https://min-api.cryptocompare.com/data/all/coinlist?summary=true`)
         this.coinSymbols = await coins.json()
@@ -166,23 +176,26 @@ export default {
         }
   },
   methods: {
+    subscribeToUpdates(tickerName) {
+      setInterval(async () => {
+        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key={24c8bb4f08806f9b68c2755a7745d07e764d3b782e9b069959a8325826493089}`)
+        const data = await f.json()
+        this.tickers.find(t => t.name === tickerName).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
+        if (this.sel?.name === tickerName) {
+          this.graph.push(data.USD)
+        }
+        console.log(data)
+      }, 3000)
+    },
     add() {
       if (this.ticker != "" && this.tickers != []) {
         const newTicker = {
           name: this.ticker,
         price: "-"
       };
-
+      this.subscribeToUpdates(newTicker.name)
       this.tickers.push(newTicker);
-      setInterval(async () => {
-        const f = await fetch(`https://min-api.cryptocompare.com/data/price?fsym=${newTicker.name}&tsyms=USD&api_key={24c8bb4f08806f9b68c2755a7745d07e764d3b782e9b069959a8325826493089}`)
-        const data = await f.json()
-        this.tickers.find(t => t.name === newTicker.name).price = data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2)
-        if (this.sel?.name === newTicker.name) {
-          this.graph.push(data.USD)
-        }
-        console.log(data)
-      }, 3000)
+      localStorage.setItem("chosenCoins", JSON.stringify(this.tickers))
       this.errorMessage = false
       this.ticker = ""
       this.autoComplete = []
