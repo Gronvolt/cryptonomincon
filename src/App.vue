@@ -175,6 +175,16 @@ export default {
   created() {
     let localData = localStorage.getItem("chosenCoins")
 
+    const windowData = Object.fromEntries(new URL(window.location).searchParams.entries())
+
+    if(windowData.filter) {
+      this.filter = windowData.filter
+    }
+
+    if(windowData.page) {
+      this.page = windowData.page
+    }
+
     if (localData) {
       this.tickers = JSON.parse(localData)
       this.tickers.forEach(ticker => {
@@ -275,6 +285,25 @@ export default {
       return this.graph.map (
        price => 5 + ((price - minVal) * 95) / (maxVal - minVal)
       )
+    }
+  },
+  watch: {
+    filter () {
+      this.page = 1
+
+      window.history.pushState(
+        null,
+        document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+        )
+    },
+
+    page () {
+      window.history.pushState(
+        null,
+        document.title,
+        `${window.location.pathname}?filter=${this.filter}&page=${this.page}`
+        )
     }
   }
 };
