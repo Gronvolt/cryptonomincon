@@ -62,8 +62,8 @@
           <div class="mt-1 relative rounded-md shadow-md">
             <input v-model="filter" class="block w-full pr-10 border-gray-300 text-gray-900 focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm rounded-md" type="text">
           </div>
-          <button class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Previous</button>
-          <button class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Next</button>
+          <button v-if="page > 1"  @click="page--" class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Previous</button>
+          <button v-if="nextPage != false" @click="page++" class="my-4 mx-2 inline-flex items-center py-2 px-4 border border-transparent shadow-sm text-sm leading-4 font-medium rounded-full text-white bg-gray-600 hover:bg-gray-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">Next</button>
         </div>
         <hr class="w-full border-t border-gray-600 my-4" />
         <dl class="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -168,7 +168,8 @@ export default {
       coinSymbols: null,
       autoComplete: [],
       page: 1,
-      filter: ""
+      filter: "",
+      nextPage: false
     };
   },
   created() {
@@ -191,7 +192,15 @@ export default {
   },
   methods: {
     filteredTickers() {
-      return this.tickers.filter(ticker => ticker.name.includes(this.filter))
+      let START = (this.page - 1) * 6
+      let END = this.page * 6
+      
+      const filteredTickers = this.tickers
+      .filter(ticker => ticker.name.includes(this.filter))
+
+      this.nextPage = filteredTickers.length > END
+      // console.log(this.nextPage)
+      return filteredTickers.slice(START, END)
     },
     subscribeToUpdates(tickerName) {
       setInterval(async () => {
@@ -201,7 +210,7 @@ export default {
         if (this.sel?.name === tickerName) {
           this.graph.push(data.USD)
         }
-        // console.log(data)
+        // console.log(this.filteredTickers())
       }, 3000)
     },
     add() {
@@ -217,6 +226,7 @@ export default {
       localStorage.setItem("chosenCoins", JSON.stringify(this.tickers))
       this.errorMessage = false
       this.ticker = ""
+      this.filter = ""
       this.autoComplete = []
       }
       else if (this.addedTickers.indexOf(this.ticker) != -1) {
@@ -238,11 +248,7 @@ export default {
           this.autoComplete.sort()
           if(this.autoComplete.length <= 2  &&  i.indexOf(this.ticker) != -1 || i == this.ticker) {
             this.autoComplete.push(i)
-          }
-          // console.dir(i.indexOf(this.ticker))
-              // let coin = i.filter(word => word.indexOf(this.ticker))
-              // console.log(coin)
-
+              }
             }
         };     
     },
